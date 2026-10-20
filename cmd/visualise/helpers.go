@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"evis/internal/ber"
@@ -16,6 +17,7 @@ type View struct {
 	Nodes        []*ber.Node
 	Err          string
 	ActiveSample string // e.g. "cc", "http-iri", "voip-both", or "" for an upload
+	IDs          map[*ber.Node]int // tree-order id per node, for the sticky selection
 }
 
 // buildView parses+annotates bytes and derives a summary.
@@ -28,6 +30,17 @@ func buildView(source, active string, b []byte) View {
 	}
 	etsi.Annotate(nodes)
 	v.Summary = summarise(nodes)
+	v.IDs = map[*ber.Node]int{}
+	var number func(n *ber.Node)
+	number = func(n *ber.Node) {
+		v.IDs[n] = len(v.IDs)
+		for _, c := range n.Children {
+			number(c)
+		}
+	}
+	for _, n := range nodes {
+		number(n)
+	}
 	return v
 }
 
@@ -71,14 +84,50 @@ func summarise(nodes []*ber.Node) string {
 
 // ---- Datastar expression helpers (kept out of the .templ for readability) ----
 
-// hoverExpr sets the selection signals when a node is hovered.
+// Signals: o/l = hovered range (preview), so/sl = selected range (sticky),
+// sid = selected node id, sn = selection label, follow = auto-scroll the hex
+// pane to a new selection.
+
+// hoverExpr sets the preview range when a node is hovered.
 func hoverExpr(off, length int) string {
 	return fmt.Sprintf("o.value = %d; l.value = %d", off, length)
 }
 
-// byteClassExpr highlights hex byte i when it falls in the selected range.
+// selectExpr makes a node the sticky selection on click. A click on the caret
+// is left alone so it still expands/collapses; any other click on a <summary>
+// is prevented from toggling it.
+func selectExpr(v View, n *ber.Node) string {
+	label := fmt.Sprintf("%s · @%d +%d", n.Name, n.Offset, n.TotalLen())
+	return fmt.Sprintf("evt.target.closest('.caret') ? null : (evt.preventDefault(), "+
+		"so.value = %d, sl.value = %d, sid.value = %d, sn.value = %s, follow.value && evisReveal(%d))",
+		n.Offset, n.TotalLen(), v.IDs[n], strconv.Quote(label), n.Offset)
+}
+
+// clearSelExpr clears the sticky selection. It is one comma expression, not
+// several statements: Datastar v0.21 splits expressions on ";", which breaks
+// a statement list nested inside "(...)" (as in the Escape handler) and with
+// it every binding on the page.
+const clearSelExpr = "so.value = -1, sl.value = 0, sid.value = -1, sn.value = ''"
+
+// sampleExpr switches to a built-in sample, clearing the selection (its
+// offsets belong to the previous file).
+func sampleExpr(name string) string {
+	return fmt.Sprintf("sample.value = '%s'; %s; sse('/view?sample=%s')", name, clearSelExpr, name)
+}
+
+func sampleClassExpr(name string) string {
+	return fmt.Sprintf("{active: sample.value == '%s'}", name)
+}
+
+// rowClassExpr marks the selected tree row.
+func rowClassExpr(v View, n *ber.Node) string {
+	return fmt.Sprintf("{sel: sid.value == %d}", v.IDs[n])
+}
+
+// byteClassExpr marks hex byte i when it falls in the hovered or selected range.
 func byteClassExpr(i int) string {
-	return fmt.Sprintf("{hl: %d >= o.value && %d < o.value + l.value}", i, i)
+	return fmt.Sprintf("{hl: %d >= o.value && %d < o.value + l.value, sel: %d >= so.value && %d < so.value + sl.value}",
+		i, i, i, i)
 }
 
 func offLabel(row int) string { return fmt.Sprintf("%08x", row*16) }

@@ -16,39 +16,54 @@ templ Page(v View) {
 				<h1>ETSI TS 102 232 · handover PDU visualiser</h1>
 				<span class="sub">HI2/HI3 PS-PDU → payload → IPCC / IPIRIOnly / IPMMCC / IPMMIRI → IPv4 · UDP/TCP · DNS/HTTP/SIP/RTP</span>
 			</header>
-			<main class="wrap" data-signals={ "{o: -1, l: 0, sample: '" + v.ActiveSample + "'}" }>
+			<main
+				class="wrap"
+				data-signals={ "{o: -1, l: 0, so: -1, sl: 0, sid: -1, sn: '', follow: true, sample: '" + v.ActiveSample + "'}" }
+				data-on-keydown__window={ "evt.key === 'Escape' && (" + clearSelExpr + ")" }
+			>
 				<div class="controls">
 					<div class="group">
 						<label>DNS:</label>
-						<button data-on-click="sample.value='cc'; sse('/view?sample=cc')" data-class="{active: sample.value=='cc'}">CC payload</button>
-						<button data-on-click="sample.value='iri'; sse('/view?sample=iri')" data-class="{active: sample.value=='iri'}">IRI-only</button>
-						<button data-on-click="sample.value='both'; sse('/view?sample=both')" data-class="{active: sample.value=='both'}">IRI + CC</button>
+						<button data-on-click={ sampleExpr("cc") } data-class={ sampleClassExpr("cc") }>CC payload</button>
+						<button data-on-click={ sampleExpr("iri") } data-class={ sampleClassExpr("iri") }>IRI-only</button>
+						<button data-on-click={ sampleExpr("both") } data-class={ sampleClassExpr("both") }>IRI + CC</button>
 					</div>
 					<div class="group">
 						<label>HTTP:</label>
-						<button data-on-click="sample.value='http-cc'; sse('/view?sample=http-cc')" data-class="{active: sample.value=='http-cc'}">CC payload</button>
-						<button data-on-click="sample.value='http-iri'; sse('/view?sample=http-iri')" data-class="{active: sample.value=='http-iri'}">IRI-only</button>
-						<button data-on-click="sample.value='http-both'; sse('/view?sample=http-both')" data-class="{active: sample.value=='http-both'}">IRI + CC</button>
-						<button data-on-click="sample.value='http-exchange'; sse('/view?sample=http-exchange')" data-class="{active: sample.value=='http-exchange'}">Exchange</button>
-						<button data-on-click="sample.value='http-reordered'; sse('/view?sample=http-reordered')" data-class="{active: sample.value=='http-reordered'}">Reordered</button>
+						<button data-on-click={ sampleExpr("http-cc") } data-class={ sampleClassExpr("http-cc") }>CC payload</button>
+						<button data-on-click={ sampleExpr("http-iri") } data-class={ sampleClassExpr("http-iri") }>IRI-only</button>
+						<button data-on-click={ sampleExpr("http-both") } data-class={ sampleClassExpr("http-both") }>IRI + CC</button>
+						<button data-on-click={ sampleExpr("http-exchange") } data-class={ sampleClassExpr("http-exchange") }>Exchange</button>
+						<button data-on-click={ sampleExpr("http-reordered") } data-class={ sampleClassExpr("http-reordered") }>Reordered</button>
 					</div>
 					<div class="group">
 						<label>VoIP:</label>
-						<button data-on-click="sample.value='voip-cc'; sse('/view?sample=voip-cc')" data-class="{active: sample.value=='voip-cc'}">RTP CC</button>
-						<button data-on-click="sample.value='voip-iri'; sse('/view?sample=voip-iri')" data-class="{active: sample.value=='voip-iri'}">SIP IRI</button>
-						<button data-on-click="sample.value='voip-both'; sse('/view?sample=voip-both')" data-class="{active: sample.value=='voip-both'}">IRI + CC</button>
+						<button data-on-click={ sampleExpr("voip-cc") } data-class={ sampleClassExpr("voip-cc") }>RTP CC</button>
+						<button data-on-click={ sampleExpr("voip-iri") } data-class={ sampleClassExpr("voip-iri") }>SIP IRI</button>
+						<button data-on-click={ sampleExpr("voip-both") } data-class={ sampleClassExpr("voip-both") }>IRI + CC</button>
 					</div>
 					<div class="group">
 						<form data-on-submit__prevent="sse('/upload', {method: 'post', contentType: 'form'})">
 							<label class="filelbl">
 								Upload .etsi…
-								<input type="file" name="file" accept=".etsi,.bin,.ps,.hi3,application/octet-stream" data-on-change="sample.value=''; sse('/upload', {method: 'post', contentType: 'form'})"/>
+								<input type="file" name="file" accept=".etsi,.bin,.ps,.hi3,application/octet-stream" data-on-change={ "sample.value = ''; " + clearSelExpr + "; sse('/upload', {method: 'post', contentType: 'form'})" }/>
 							</label>
 						</form>
 					</div>
 				</div>
+				<div class="selbar">
+					<span class="sellbl">Selected:</span>
+					<span class="selname" data-show="sid.value >= 0" data-text="sn.value"></span>
+					<span class="selnone" data-show="sid.value < 0">nothing — click a field in the PDU tree to pin it</span>
+					<span class="selbtns">
+						<button data-on-click="evisReveal(so.value)" data-attributes-disabled="sid.value < 0">Jump to selection</button>
+						<button data-on-click={ clearSelExpr } data-attributes-disabled="sid.value < 0">Clear selection</button>
+						<button data-on-click="follow.value = !follow.value" data-class="{active: follow.value}" title="When on, selecting a field scrolls the raw BER pane to its bytes">Auto-scroll</button>
+					</span>
+				</div>
 				@Result(v)
 			</main>
+			<script src="/static/app.js"></script>
 			<script type="module" src="/static/datastar.js"></script>
 		</body>
 	</html>
@@ -66,8 +81,8 @@ templ Result(v View) {
 		}
 		<div class="panes">
 			<div class="pane">
-				<div class="cap">Raw BER ({ byteLen(v) } bytes)</div>
-				<div class="body">
+				<div class="cap">Raw BER ({ byteLen(v) } bytes) — scroll independently; the pinned selection stays highlighted</div>
+				<div class="body" id="hexbody">
 					<div class="hex" data-on-mouseleave="o.value=-1; l.value=0">
 						for row := 0; row < numRows(len(v.Bytes)); row++ {
 							@hexRow(v.Bytes, row)
@@ -76,11 +91,11 @@ templ Result(v View) {
 				</div>
 			</div>
 			<div class="pane">
-				<div class="cap">PDU tree — hover a field to highlight its bytes</div>
+				<div class="cap">PDU tree — hover to preview, click to pin; ▸ expands</div>
 				<div class="body">
 					<div class="tree" data-on-mouseleave="o.value=-1; l.value=0">
 						for _, n := range v.Nodes {
-							@node(n)
+							@node(v, n)
 						}
 					</div>
 					<div class="legend">
@@ -107,20 +122,32 @@ templ hexRow(b []byte, row int) {
 	</div>
 }
 
-templ node(n *ber.Node) {
+templ node(v View, n *ber.Node) {
 	if hasKids(n) {
 		<details open>
-			<summary title={ n.Note } data-on-mouseenter={ hoverExpr(n.Offset, n.TotalLen()) }>
+			<summary
+				title={ n.Note }
+				data-on-mouseenter={ hoverExpr(n.Offset, n.TotalLen()) }
+				data-on-click={ selectExpr(v, n) }
+				data-class={ rowClassExpr(v, n) }
+			>
+				<span class="caret" title="expand / collapse"></span>
 				@badges(n)
 			</summary>
 			<div class="node-children">
 				for _, c := range n.Children {
-					@node(c)
+					@node(v, c)
 				}
 			</div>
 		</details>
 	} else {
-		<div class="leaf" title={ n.Note } data-on-mouseenter={ hoverExpr(n.Offset, n.TotalLen()) }>
+		<div
+			class="leaf"
+			title={ n.Note }
+			data-on-mouseenter={ hoverExpr(n.Offset, n.TotalLen()) }
+			data-on-click={ selectExpr(v, n) }
+			data-class={ rowClassExpr(v, n) }
+		>
 			@badges(n)
 		</div>
 	}

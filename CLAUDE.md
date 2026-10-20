@@ -130,9 +130,19 @@ Datastar expressions to change together).
   containing one `event: datastar-merge-fragments` + `data: fragments <html>`
   lines — see `mergeResult` in `main.go`. `Result` renders `<div id="result">`,
   which Datastar morphs by id.
-- Signals live on `<main data-signals="{o,l,sample}">` (persists across merges).
-  Tree rows set `o.value/l.value` on mouseenter; each hex byte has
-  `data-class="{hl: N >= o.value && N < o.value + l.value}"`.
+- Signals live on `<main data-signals="{o,l,so,sl,sid,sn,follow,sample}">`
+  (persists across merges). `o/l` = hovered range (preview, set on
+  mouseenter); `so/sl/sid/sn` = the pinned selection (set on click, cleared by
+  Esc, "Clear selection", and any sample switch or upload); `follow` = scroll
+  the hex pane to a new pin. Each hex byte has
+  `data-class="{hl: …o/l…, sel: …so/sl…}"`. Expressions are built in
+  `helpers.go` (`selectExpr`, `sampleExpr`, `clearSelExpr`, …), not inline.
+- **Datastar v0.21 splits expressions on `;`** into statements. A `;` list
+  nested inside `(...)` is a syntax error that kills every binding on the page.
+  Inside parentheses or ternaries use the comma operator (see `clearSelExpr`).
+- Clicking a tree `<summary>` pins it and `preventDefault`s the toggle; only the
+  `.caret` span expands/collapses. `static/app.js` holds `evisReveal(off)`,
+  which scrolls only `#hexbody` (never the page).
 - templ may HTML-escape attribute values (`'`→`&#39;`, `<`→`&lt;`; v0.2 did,
   v0.3 emits static attributes verbatim). Either is fine — the browser decodes
   entities before Datastar reads them. Do not "fix" the entities.
