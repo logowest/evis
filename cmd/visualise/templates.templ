@@ -1,0 +1,129 @@
+package main
+
+import "evis/internal/ber"
+
+templ Page(v View) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>ETSI TS 102 232 — DNS handover PDU visualiser</title>
+			<link rel="stylesheet" href="/static/app.css"/>
+		</head>
+		<body>
+			<header>
+				<h1>ETSI TS 102 232 · DNS handover PDU visualiser</h1>
+				<span class="sub">HI2/HI3 PS-PDU → payload → IPCC / IPIRIOnly → IPv4 · UDP · DNS</span>
+			</header>
+			<main class="wrap" data-signals={ "{o: -1, l: 0, sample: '" + v.ActiveSample + "'}" }>
+				<div class="controls">
+					<div class="group">
+						<label>Sample:</label>
+						<button data-on-click="sample.value='cc'; sse('/view?sample=cc')" data-class="{active: sample.value=='cc'}">CC payload</button>
+						<button data-on-click="sample.value='iri'; sse('/view?sample=iri')" data-class="{active: sample.value=='iri'}">IRI-only</button>
+						<button data-on-click="sample.value='both'; sse('/view?sample=both')" data-class="{active: sample.value=='both'}">IRI + CC</button>
+					</div>
+					<div class="group">
+						<form data-on-submit__prevent="sse('/upload', {method: 'post', contentType: 'form'})">
+							<label class="filelbl">
+								Upload .etsi…
+								<input type="file" name="file" accept=".etsi,.bin,.ps,.hi3,application/octet-stream" data-on-change="sample.value=''; sse('/upload', {method: 'post', contentType: 'form'})"/>
+							</label>
+						</form>
+					</div>
+				</div>
+				@Result(v)
+			</main>
+			<script type="module" src="/static/datastar.js"></script>
+		</body>
+	</html>
+}
+
+templ Result(v View) {
+	<div id="result">
+		<div class="summary">
+			<span class="src">{ v.Source }</span>
+			<span class="desc">{ v.Summary }</span>
+			<span class="len">{ offLabelLen(v) }</span>
+		</div>
+		if v.Err != "" {
+			<div class="summary"><span class="err">decode error: { v.Err }</span></div>
+		}
+		<div class="panes">
+			<div class="pane">
+				<div class="cap">Raw BER ({ byteLen(v) } bytes)</div>
+				<div class="body">
+					<div class="hex" data-on-mouseleave="o.value=-1; l.value=0">
+						for row := 0; row < numRows(len(v.Bytes)); row++ {
+							@hexRow(v.Bytes, row)
+						}
+					</div>
+				</div>
+			</div>
+			<div class="pane">
+				<div class="cap">PDU tree — hover a field to highlight its bytes</div>
+				<div class="body">
+					<div class="tree" data-on-mouseleave="o.value=-1; l.value=0">
+						for _, n := range v.Nodes {
+							@node(n)
+						}
+					</div>
+					<div class="legend">
+						<code>[n]</code> context tag · <code>EXPLICIT</code> wraps a CHOICE · dashed tags are decoded inner protocol fields, not ASN.1.
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
+
+templ hexRow(b []byte, row int) {
+	<div class="hrow">
+		<span class="off">{ offLabel(row) }</span>
+		<span class="hbytes">
+			for _, i := range rowBytes(b, row) {
+				<span
+					class={ "byte", templ.KV("gap", i%16 == 8) }
+					data-class={ byteClassExpr(i) }
+				>{ hexByte(b[i]) }</span>
+			}
+		</span>
+		<span class="hasc">{ asciiRow(b, row) }</span>
+	</div>
+}
+
+templ node(n *ber.Node) {
+	if hasKids(n) {
+		<details open>
+			<summary title={ n.Note } data-on-mouseenter={ hoverExpr(n.Offset, n.TotalLen()) }>
+				@badges(n)
+			</summary>
+			<div class="node-children">
+				for _, c := range n.Children {
+					@node(c)
+				}
+			</div>
+		</details>
+	} else {
+		<div class="leaf" title={ n.Note } data-on-mouseenter={ hoverExpr(n.Offset, n.TotalLen()) }>
+			@badges(n)
+		</div>
+	}
+}
+
+templ badges(n *ber.Node) {
+	if n.TagString() != "" {
+		<span class="tag">{ n.TagString() }</span>
+	} else if n.Raw {
+		<span class="tag raw">raw</span>
+	}
+	<span class="nm">{ n.Name }</span>
+	if n.TypeName != "" {
+		<span class="ty">{ n.TypeName }</span>
+	}
+	if n.Value != "" {
+		<span class="vl">{ n.Value }</span>
+	}
+	<span class="off2">{ offInfo(n) }</span>
+}
