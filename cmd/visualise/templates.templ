@@ -13,16 +13,30 @@ templ Page(v View) {
 		</head>
 		<body>
 			<header>
-				<h1>ETSI TS 102 232 · DNS handover PDU visualiser</h1>
-				<span class="sub">HI2/HI3 PS-PDU → payload → IPCC / IPIRIOnly → IPv4 · UDP · DNS</span>
+				<h1>ETSI TS 102 232 · handover PDU visualiser</h1>
+				<span class="sub">HI2/HI3 PS-PDU → payload → IPCC / IPIRIOnly / IPMMCC / IPMMIRI → IPv4 · UDP/TCP · DNS/HTTP/SIP/RTP</span>
 			</header>
 			<main class="wrap" data-signals={ "{o: -1, l: 0, sample: '" + v.ActiveSample + "'}" }>
 				<div class="controls">
 					<div class="group">
-						<label>Sample:</label>
+						<label>DNS:</label>
 						<button data-on-click="sample.value='cc'; sse('/view?sample=cc')" data-class="{active: sample.value=='cc'}">CC payload</button>
 						<button data-on-click="sample.value='iri'; sse('/view?sample=iri')" data-class="{active: sample.value=='iri'}">IRI-only</button>
 						<button data-on-click="sample.value='both'; sse('/view?sample=both')" data-class="{active: sample.value=='both'}">IRI + CC</button>
+					</div>
+					<div class="group">
+						<label>HTTP:</label>
+						<button data-on-click="sample.value='http-cc'; sse('/view?sample=http-cc')" data-class="{active: sample.value=='http-cc'}">CC payload</button>
+						<button data-on-click="sample.value='http-iri'; sse('/view?sample=http-iri')" data-class="{active: sample.value=='http-iri'}">IRI-only</button>
+						<button data-on-click="sample.value='http-both'; sse('/view?sample=http-both')" data-class="{active: sample.value=='http-both'}">IRI + CC</button>
+						<button data-on-click="sample.value='http-exchange'; sse('/view?sample=http-exchange')" data-class="{active: sample.value=='http-exchange'}">Exchange</button>
+						<button data-on-click="sample.value='http-reordered'; sse('/view?sample=http-reordered')" data-class="{active: sample.value=='http-reordered'}">Reordered</button>
+					</div>
+					<div class="group">
+						<label>VoIP:</label>
+						<button data-on-click="sample.value='voip-cc'; sse('/view?sample=voip-cc')" data-class="{active: sample.value=='voip-cc'}">RTP CC</button>
+						<button data-on-click="sample.value='voip-iri'; sse('/view?sample=voip-iri')" data-class="{active: sample.value=='voip-iri'}">SIP IRI</button>
+						<button data-on-click="sample.value='voip-both'; sse('/view?sample=voip-both')" data-class="{active: sample.value=='voip-both'}">IRI + CC</button>
 					</div>
 					<div class="group">
 						<form data-on-submit__prevent="sse('/upload', {method: 'post', contentType: 'form'})">

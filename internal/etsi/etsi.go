@@ -1,5 +1,5 @@
 // Package etsi builds ETSI TS 102 232 handover PDUs (the HI2/HI3 "NHIS" stream)
-// for a single DNS request, and annotates decoded PDUs for display.
+// for a single DNS request, HTTP request or VoIP (SIP + RTP) call, and annotates decoded PDUs for display.
 //
 // Structure follows the published ASN.1 modules for TS 102 232-1 V3.38.1
 // (ETSI forge, li/schemas-definitions):
@@ -111,7 +111,16 @@ func psHeader(m Meta) []byte {
 func BuildCC(m Meta, s Scenario) []byte {
 	dnsMsg := dns.Build(s.DNS)
 	packet := ipstack.UDPDatagram(s.SrcIP, s.DstIP, s.SrcPort, s.DstPort, s.IPIdent, s.TTL, dnsMsg)
+	return ccPDU(m, packet)
+}
 
+// ccPDU wraps one intercepted IP packet sent by the target as a CC PS-PDU
+// (IPCC / iPPackets).
+func ccPDU(m Meta, packet []byte) []byte { return ipccPDU(m, dirFromTarget, packet) }
+
+// ipccPDU wraps one intercepted IP packet as a CC PS-PDU (IPCC / iPPackets)
+// with the given payloadDirection.
+func ipccPDU(m Meta, dir int, packet []byte) []byte {
 	// IPCC ::= SEQUENCE { iPCCObjId [0] RELATIVE-OID, iPCCContents [1] IPCCContents }
 	// IPCCContents ::= CHOICE { iPPackets [0] OCTET STRING, ... }
 	ipccContents := ber.CExplicit(1, // iPCCContents [1] CHOICE -> explicit
@@ -121,11 +130,21 @@ func BuildCC(m Meta, s Scenario) []byte {
 		ber.CRelOID(0, ipCCObjID...), // iPCCObjId [0] RELATIVE-OID
 		ipccContents,                 // iPCCContents [1]
 	)
-	cCContents := ber.CExplicit(2, ipcc) // cCContents [2] CCContents CHOICE -> explicit
+	return ccPayloadPDU(m, dir, ipcc)
+}
 
+// payloadDirection values (TS 102 232-1 PayloadDirection).
+const (
+	dirFromTarget = 0
+	dirToTarget   = 1
+)
+
+// ccPayloadPDU wraps one CCContents alternative (e.g. iPCC [2], iPMMCC [12])
+// as a CC PS-PDU.
+func ccPayloadPDU(m Meta, dir int, ccContents []byte) []byte {
 	ccPayload := ber.Seq( // CCPayload ::= SEQUENCE
-		ber.CEnum(0, 0), // payloadDirection [0] fromTarget(0)
-		cCContents,      // cCContents       [2]
+		ber.CEnum(0, dir),            // payloadDirection [0]
+		ber.CExplicit(2, ccContents), // cCContents [2] CCContents CHOICE -> explicit
 	)
 	payload := ber.CExplicit(2, // PS-PDU payload [2] Payload CHOICE -> explicit
 		ber.CCons(1, ccPayload), // cCPayloadSequence [1] SEQUENCE OF CCPayload
@@ -137,22 +156,8 @@ func BuildCC(m Meta, s Scenario) []byte {
 // the IPv4 + UDP header fields of the DNS request without the packet content.
 // This is the header-only intercept-related-information handover.
 func BuildIRIOnly(m Meta, s Scenario) []byte {
-	src4 := s.SrcIP.To4()
-	dst4 := s.DstIP.To4()
 	dnsMsg := dns.Build(s.DNS)
 	udpLen := 8 + len(dnsMsg)
-	totalLen := 20 + udpLen
-
-	// IPv4Information ::= SEQUENCE { ... source [8], destination [9], ... }
-	ipv4Info := ber.CCons(0, // IPInformation alternative iPv4Information [0] (SEQUENCE)
-		ber.COctet(2, ber.Fixed(2, uint64(totalLen))),  // totalLength    [2]
-		ber.COctet(3, ber.Fixed(2, uint64(s.IPIdent))), // identification [3]
-		ber.COctet(5, []byte{s.TTL}),                   // ttl            [5]
-		ber.COctet(6, []byte{17}),                      // protocol       [6] UDP
-		ber.COctet(8, src4),                            // source         [8]
-		ber.COctet(9, dst4),                            // destination    [9]
-	)
-	ipInformation := ber.CExplicit(1, ipv4Info) // iPInformation [1] CHOICE -> explicit
 
 	// UDPInformation ::= SEQUENCE { sourcePort [0], destinationPort [1], length [2], checkSum [3] }
 	udpInfo := ber.CCons(2, // ProtocolInformation alternative uDPInformation [2] (SEQUENCE)
@@ -161,18 +166,48 @@ func BuildIRIOnly(m Meta, s Scenario) []byte {
 		ber.COctet(2, ber.Fixed(2, uint64(udpLen))),    // length          [2]
 		ber.COctet(3, ber.Fixed(2, 0)),                 // checkSum        [3] (not reported here)
 	)
-	protoInformation := ber.CExplicit(2, udpInfo) // protocolInformation [2] CHOICE -> explicit
+	return iriPDU(m, ipv4Info(s.SrcIP, s.DstIP, 20+udpLen, s.IPIdent, s.TTL, 17), udpInfo)
+}
 
+// ipv4Info builds the iPv4Information alternative of IPInformation.
+func ipv4Info(src, dst net.IP, totalLen int, ident uint16, ttl, proto uint8) []byte {
+	// IPv4Information ::= SEQUENCE { ... source [8], destination [9], ... }
+	return ber.CCons(0, // IPInformation alternative iPv4Information [0] (SEQUENCE)
+		ber.COctet(2, ber.Fixed(2, uint64(totalLen))), // totalLength    [2]
+		ber.COctet(3, ber.Fixed(2, uint64(ident))),    // identification [3]
+		ber.COctet(5, []byte{ttl}),                    // ttl            [5]
+		ber.COctet(6, []byte{proto}),                  // protocol       [6]
+		ber.COctet(8, src.To4()),                      // source         [8]
+		ber.COctet(9, dst.To4()),                      // destination    [9]
+	)
+}
+
+// iriPDU wraps IP and transport header information as an IRI PS-PDU
+// (IPIRIOnly). ipInfo is an IPInformation alternative, protoInfo a
+// ProtocolInformation alternative; both get their explicit CHOICE wrappers here.
+func iriPDU(m Meta, ipInfo, protoInfo []byte) []byte {
 	ipIRIOnly := ber.CCons(3, // IRIContents alternative iPIRIOnly [3] IPIRIOnly (SEQUENCE)
 		ber.CRelOID(0, ipIRIOnlyObjID...), // iPIRIOnlyObjId [0] RELATIVE-OID
-		ipInformation,                     // iPInformation  [1]
-		protoInformation,                  // protocolInformation [2]
+		ber.CExplicit(1, ipInfo),          // iPInformation  [1] CHOICE -> explicit
+		ber.CExplicit(2, protoInfo),       // protocolInformation [2] CHOICE -> explicit
 	)
-	iriContents := ber.CExplicit(2, ipIRIOnly) // iRIContents [2] IRIContents CHOICE -> explicit
+	return iriPayloadPDU(m, iriReport, ipIRIOnly)
+}
 
+// IRIType values (TS 102 232-1).
+const (
+	iriBegin    = 1
+	iriEnd      = 2
+	iriContinue = 3
+	iriReport   = 4
+)
+
+// iriPayloadPDU wraps one IRIContents alternative (e.g. iPIRIOnly [3],
+// iPMMIRI [11]) as an IRI PS-PDU.
+func iriPayloadPDU(m Meta, iriType int, iriContents []byte) []byte {
 	iriPayload := ber.Seq( // IRIPayload ::= SEQUENCE
-		ber.CEnum(0, 4), // iRIType [0] iRI-Report(4)
-		iriContents,     // iRIContents [2]
+		ber.CEnum(0, iriType),         // iRIType [0]
+		ber.CExplicit(2, iriContents), // iRIContents [2] IRIContents CHOICE -> explicit
 	)
 	payload := ber.CExplicit(2, // PS-PDU payload [2] Payload CHOICE -> explicit
 		ber.CCons(0, iriPayload), // iRIPayloadSequence [0] SEQUENCE OF IRIPayload

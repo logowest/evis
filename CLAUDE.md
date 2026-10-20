@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 Guidance for working on **evis** — a Go tool that builds ETSI TS 102 232
-(HI2/HI3) handover PDUs for a single DNS request and serves a templ + Datastar
+(HI2/HI3) handover PDUs for a DNS request, an HTTP request and a VoIP call
+(SIP + RTP), and serves a templ + Datastar
 web UI that decodes them. Read this before changing the encoder or the UI.
 
 ## Commands
@@ -36,6 +37,7 @@ Both ASN.1 modules are `DEFINITIONS IMPLICIT TAGS`. The encoder in
    - `payload` ([2], Payload is CHOICE)
    - `cCContents` ([2]), `iPCCContents` ([1])
    - `iRIContents` ([2]), `iPInformation` ([1]), `protocolInformation` ([2])
+   - `iPMMIRIContents` ([1], TS 102 232-5), `iP-value` ([2], inside `IPAddress`)
 
 If you add a field whose type is a CHOICE, it needs `CExplicit`, not `CCons`.
 If it's anything else, it's implicit. Getting this wrong still produces parseable
@@ -52,6 +54,10 @@ Targets **TS 102 232-1 V3.38.1 (2026-08)**. ASN.1 from the public ETSI LI forge
   `li-psDomainId = 0.4.0.2.2.5.1.43`.
 - `102232-3/IPAccessPDU.asn` — TS 102 232-3, module **version 20**.
   RELATIVE-OIDs: `iPCCObjId = 5.3.20.2`, `iPIRIOnlyObjId = 5.3.20.3`.
+- `102232-5/IPMultimediaPDU.asn` — TS 102 232-5, module **version 17** (the one
+  LI-PS-PDU v43 imports). RELATIVE-OIDs: `iPMMIRIObjId = 5.5.17.1`,
+  `iPMMCCObjId = 5.5.17.2`. Each IPMMCC holds exactly one media packet, so the
+  VoIP CC is one PS-PDU per RTP packet.
 
 Every field used here is unchanged since v31 / v13 (the earlier `li/trial`
 commit `49d1c4c2…`); newer versions only added extensions.
@@ -70,10 +76,26 @@ labels/enum maps in `annotate.go` together.
 internal/ber/        BER toolkit. ber.go = encoder (TLV + C* helpers).
                      parse.go = parser + Node tree (absolute Offset/HeaderLen/Length).
 internal/dns/        DNS query Build() + DecodeNodes() (RFC 1035, query only).
-internal/ipstack/    IPv4/UDP UDPDatagram() with real checksums + DecodeNodes().
-internal/etsi/       etsi.go   = PDU builders (BuildCC, BuildIRIOnly, Meta, Scenario).
+internal/httpmsg/    HTTP/1.1 Build()/BuildResponse() + DecodeNodes(); MessageLen()
+                     framing (Content-Length / chunked / no-body rules); body
+                     decoding (chunked, gzip/deflate). A Dialect, so SIP reuses it.
+internal/tcpreasm/   Generic TCP reassembly of one flow direction: ordering,
+                     retransmissions, overlaps, gaps; Spans map stream bytes
+                     back to file offsets.
+internal/sip/        SIP request Build() + DecodeNodes() with SDP body lines.
+internal/rtp/        RTP Build() + DecodeNodes() + LooksLikeRTP() heuristic.
+internal/ipstack/    IPv4 + UDPDatagram()/TCPSegment() with real checksums;
+                     DecodeNodes() returns the Transport (proto + ports).
+internal/etsi/       etsi.go   = PS-PDU builders + DNS (BuildCC, BuildIRIOnly,
+                                 ccPayloadPDU/iriPayloadPDU wrappers, Meta).
+                     http.go / voip.go = HTTP and VoIP (IPMMIRI/IPMMCC) scenarios.
                      annotate.go = walks a decoded tree, labels ETSI fields,
-                                   drills iPPackets into IPv4/UDP/DNS nodes.
+                                   drills packets into IPv4 · UDP/TCP ·
+                                   DNS (port 53) / SIP (5060) / RTP / HTTP.
+                     reassemble.go = cross-PDU pass run by Annotate: groups TCP
+                                   packets by LIID/NID/CIN + 4-tuple, reassembles,
+                                   attaches "reassembled …" nodes to the PDU that
+                                   completes each multi-segment message.
                      fieldinfo.go = per-field descriptions (Node.Note), shown
                                    as tree tooltips; § refs are TS 102 232-1 V3.38.1.
 cmd/gen/             generator CLI; also prints the annotated tree as a self-check.
@@ -82,13 +104,17 @@ cmd/visualise/       web server (main.go), view model + Datastar expr helpers
 ```
 
 Import direction (no cycles): `ber` depends on nothing; `dns`/`ipstack` import
-`ber` (to emit `Node`s); `etsi` imports `ber`+`dns`+`ipstack`; `cmd/*` import
+`ber` (to emit `Node`s), `sip` also imports `httpmsg`; `tcpreasm` imports nothing; `etsi` imports `ber` and
+all the protocol packages; `cmd/*` import
 `etsi`+`ber`.
 
 `ber.Node` is the single tree type. A normal node is a TLV. A node with
 `Raw = true` is a labelled byte range (HeaderLen 0) — used for the decoded inner
-IPv4/UDP/DNS fields, with absolute offsets so hex highlighting works through the
-protocol layers.
+protocol fields, with absolute offsets so hex highlighting works through the
+protocol layers. A node highlights one contiguous range: reassembled fields
+that span segments highlight the part in their first segment and say so in
+their Note (multi-range highlighting would need Node, helpers.go and the
+Datastar expressions to change together).
 
 ## Web UI specifics
 

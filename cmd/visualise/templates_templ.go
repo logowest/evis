@@ -5,12 +5,10 @@ package main
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import (
-	"evis/internal/ber"
+import "github.com/a-h/templ"
+import templruntime "github.com/a-h/templ/runtime"
 
-	"github.com/a-h/templ"
-	templruntime "github.com/a-h/templ/runtime"
-)
+import "evis/internal/ber"
 
 func Page(v View) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
@@ -33,20 +31,20 @@ func Page(v View) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>ETSI TS 102 232 — DNS handover PDU visualiser</title><link rel=\"stylesheet\" href=\"/static/app.css\"></head><body><header><h1>ETSI TS 102 232 · DNS handover PDU visualiser</h1><span class=\"sub\">HI2/HI3 PS-PDU → payload → IPCC / IPIRIOnly → IPv4 · UDP · DNS</span></header><main class=\"wrap\" data-signals=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>ETSI TS 102 232 — DNS handover PDU visualiser</title><link rel=\"stylesheet\" href=\"/static/app.css\"></head><body><header><h1>ETSI TS 102 232 · handover PDU visualiser</h1><span class=\"sub\">HI2/HI3 PS-PDU → payload → IPCC / IPIRIOnly / IPMMCC / IPMMIRI → IPv4 · UDP/TCP · DNS/HTTP/SIP/RTP</span></header><main class=\"wrap\" data-signals=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue("{o: -1, l: 0, sample: '" + v.ActiveSample + "'}")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 19, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 19, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><div class=\"controls\"><div class=\"group\"><label>Sample:</label> <button data-on-click=\"sample.value='cc'; sse('/view?sample=cc')\" data-class=\"{active: sample.value=='cc'}\">CC payload</button> <button data-on-click=\"sample.value='iri'; sse('/view?sample=iri')\" data-class=\"{active: sample.value=='iri'}\">IRI-only</button> <button data-on-click=\"sample.value='both'; sse('/view?sample=both')\" data-class=\"{active: sample.value=='both'}\">IRI + CC</button></div><div class=\"group\"><form data-on-submit__prevent=\"sse('/upload', {method: 'post', contentType: 'form'})\"><label class=\"filelbl\">Upload .etsi… <input type=\"file\" name=\"file\" accept=\".etsi,.bin,.ps,.hi3,application/octet-stream\" data-on-change=\"sample.value=''; sse('/upload', {method: 'post', contentType: 'form'})\"></label></form></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><div class=\"controls\"><div class=\"group\"><label>DNS:</label> <button data-on-click=\"sample.value='cc'; sse('/view?sample=cc')\" data-class=\"{active: sample.value=='cc'}\">CC payload</button> <button data-on-click=\"sample.value='iri'; sse('/view?sample=iri')\" data-class=\"{active: sample.value=='iri'}\">IRI-only</button> <button data-on-click=\"sample.value='both'; sse('/view?sample=both')\" data-class=\"{active: sample.value=='both'}\">IRI + CC</button></div><div class=\"group\"><label>HTTP:</label> <button data-on-click=\"sample.value='http-cc'; sse('/view?sample=http-cc')\" data-class=\"{active: sample.value=='http-cc'}\">CC payload</button> <button data-on-click=\"sample.value='http-iri'; sse('/view?sample=http-iri')\" data-class=\"{active: sample.value=='http-iri'}\">IRI-only</button> <button data-on-click=\"sample.value='http-both'; sse('/view?sample=http-both')\" data-class=\"{active: sample.value=='http-both'}\">IRI + CC</button> <button data-on-click=\"sample.value='http-exchange'; sse('/view?sample=http-exchange')\" data-class=\"{active: sample.value=='http-exchange'}\">Exchange</button> <button data-on-click=\"sample.value='http-reordered'; sse('/view?sample=http-reordered')\" data-class=\"{active: sample.value=='http-reordered'}\">Reordered</button></div><div class=\"group\"><label>VoIP:</label> <button data-on-click=\"sample.value='voip-cc'; sse('/view?sample=voip-cc')\" data-class=\"{active: sample.value=='voip-cc'}\">RTP CC</button> <button data-on-click=\"sample.value='voip-iri'; sse('/view?sample=voip-iri')\" data-class=\"{active: sample.value=='voip-iri'}\">SIP IRI</button> <button data-on-click=\"sample.value='voip-both'; sse('/view?sample=voip-both')\" data-class=\"{active: sample.value=='voip-both'}\">IRI + CC</button></div><div class=\"group\"><form data-on-submit__prevent=\"sse('/upload', {method: 'post', contentType: 'form'})\"><label class=\"filelbl\">Upload .etsi… <input type=\"file\" name=\"file\" accept=\".etsi,.bin,.ps,.hi3,application/octet-stream\" data-on-change=\"sample.value=''; sse('/upload', {method: 'post', contentType: 'form'})\"></label></form></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -90,7 +88,7 @@ func Result(v View) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(v.Source)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 46, Col: 31}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 60, Col: 31}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -103,7 +101,7 @@ func Result(v View) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(v.Summary)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 47, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 61, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -116,7 +114,7 @@ func Result(v View) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(offLabelLen(v))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 48, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 62, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -134,7 +132,7 @@ func Result(v View) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(v.Err)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 51, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 65, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -152,7 +150,7 @@ func Result(v View) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(byteLen(v))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 55, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 69, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -214,7 +212,7 @@ func hexRow(b []byte, row int) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(offLabel(row))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 83, Col: 35}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 97, Col: 35}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -237,7 +235,7 @@ func hexRow(b []byte, row int) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var11).String())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 1, Col: 0}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 1, Col: 0}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 			if templ_7745c5c3_Err != nil {
@@ -250,7 +248,7 @@ func hexRow(b []byte, row int) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(byteClassExpr(i))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 88, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 102, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 			if templ_7745c5c3_Err != nil {
@@ -263,7 +261,7 @@ func hexRow(b []byte, row int) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(hexByte(b[i]))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 89, Col: 20}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 103, Col: 20}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -281,7 +279,7 @@ func hexRow(b []byte, row int) templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(asciiRow(b, row))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 92, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 106, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -324,7 +322,7 @@ func node(n *ber.Node) templ.Component {
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(n.Note)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 99, Col: 26}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 113, Col: 26}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 			if templ_7745c5c3_Err != nil {
@@ -337,7 +335,7 @@ func node(n *ber.Node) templ.Component {
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue(hoverExpr(n.Offset, n.TotalLen()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 99, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 113, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 			if templ_7745c5c3_Err != nil {
@@ -373,7 +371,7 @@ func node(n *ber.Node) templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(n.Note)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 109, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 123, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 			if templ_7745c5c3_Err != nil {
@@ -386,7 +384,7 @@ func node(n *ber.Node) templ.Component {
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue(hoverExpr(n.Offset, n.TotalLen()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 109, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 123, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 			if templ_7745c5c3_Err != nil {
@@ -438,7 +436,7 @@ func badges(n *ber.Node) templ.Component {
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(n.TagString())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 117, Col: 35}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 131, Col: 35}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -461,7 +459,7 @@ func badges(n *ber.Node) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(n.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 121, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 135, Col: 26}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -479,7 +477,7 @@ func badges(n *ber.Node) templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(n.TypeName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 123, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 137, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -498,7 +496,7 @@ func badges(n *ber.Node) templ.Component {
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(n.Value)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 126, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 140, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -516,7 +514,7 @@ func badges(n *ber.Node) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(offInfo(n))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates.templ`, Line: 128, Col: 32}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `cmd/visualise/templates.templ`, Line: 142, Col: 32}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {

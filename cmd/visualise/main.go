@@ -1,7 +1,8 @@
 // Command visualise serves a Datastar + a-h/templ web UI that decodes an ETSI
 // TS 102 232 handover file and shows its nested PDUs (PS-PDU → payload → IPCC /
-// IPIRIOnly → IPv4 · UDP · DNS) as an expandable tree cross-linked to a hex
-// view. It ships three built-in samples and accepts uploads.
+// IPIRIOnly / IPMMCC / IPMMIRI → IPv4 · UDP/TCP · DNS/HTTP/SIP/RTP) as an
+// expandable tree cross-linked to a hex view. It ships nine built-in samples
+// (DNS, HTTP and VoIP) and accepts uploads.
 //
 //	go run ./cmd/visualise            # then open http://localhost:8080
 //	go run ./cmd/visualise -addr :9000
@@ -34,19 +35,39 @@ func main() {
 	mux.HandleFunc("/view", handleView)
 	mux.HandleFunc("/upload", handleUpload)
 
-	log.Printf("ETSI DNS PDU visualiser on http://localhost%s", normaliseAddr(*addr))
+	log.Printf("ETSI PDU visualiser on http://localhost%s", normaliseAddr(*addr))
 	log.Fatal(http.ListenAndServe(*addr, mux))
 }
 
 func sampleView(which string) View {
 	m, s := etsi.DefaultMeta(), etsi.DefaultScenario()
+	hm, hs := etsi.DefaultHTTPMeta(), etsi.DefaultHTTPScenario()
+	vm, vs := etsi.DefaultVoIPMeta(), etsi.DefaultVoIPScenario()
 	switch which {
+	case "http-exchange":
+		return buildView("sample · HTTP exchange (request + gzip response over several segments)", which,
+			etsi.BuildHTTPExchange(hm, hs, etsi.DefaultHTTPExchange(hm)))
+	case "http-reordered":
+		return buildView("sample · HTTP exchange, reordered + retransmission", which,
+			etsi.BuildHTTPExchange(hm, hs, etsi.ReorderedHTTPExchange(hm)))
+	case "voip-iri":
+		return buildView("sample · VoIP IRI (IPMMIRI / SIP INVITE)", which, etsi.BuildSIPIRI(vm, vs))
+	case "voip-cc":
+		return buildView("sample · VoIP CC (IPMMCC / RTP, three PS-PDUs)", which, etsi.BuildVoIPCC(vm, vs))
+	case "voip-both":
+		return buildView("sample · VoIP IRI + CC (four PS-PDUs)", which, etsi.BuildVoIPIRIAndCC(vm, vs))
+	case "http-cc":
+		return buildView("sample · HTTP CC (IPCC / iPPackets)", which, etsi.BuildHTTPCC(hm, hs))
+	case "http-iri":
+		return buildView("sample · HTTP IRI-only (IPIRIOnly)", which, etsi.BuildHTTPIRIOnly(hm, hs))
+	case "http-both":
+		return buildView("sample · HTTP IRI + CC (two PS-PDUs)", which, etsi.BuildHTTPIRIAndCC(hm, hs))
 	case "iri":
-		return buildView("sample · IRI-only (IPIRIOnly)", "iri", etsi.BuildIRIOnly(m, s))
+		return buildView("sample · DNS IRI-only (IPIRIOnly)", "iri", etsi.BuildIRIOnly(m, s))
 	case "both":
-		return buildView("sample · IRI + CC (two PS-PDUs)", "both", etsi.BuildIRIAndCC(m, s))
+		return buildView("sample · DNS IRI + CC (two PS-PDUs)", "both", etsi.BuildIRIAndCC(m, s))
 	default:
-		return buildView("sample · CC (IPCC / iPPackets)", "cc", etsi.BuildCC(m, s))
+		return buildView("sample · DNS CC (IPCC / iPPackets)", "cc", etsi.BuildCC(m, s))
 	}
 }
 

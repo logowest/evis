@@ -10,10 +10,20 @@ import (
 // a field added to annotate.go without a matching fieldNotes entry fails here.
 func TestEveryNodeDescribed(t *testing.T) {
 	m, s := DefaultMeta(), DefaultScenario()
+	hm, hs := DefaultHTTPMeta(), DefaultHTTPScenario()
+	vm, vs := DefaultVoIPMeta(), DefaultVoIPScenario()
 	for name, b := range map[string][]byte{
-		"cc":     BuildCC(m, s),
-		"iri":    BuildIRIOnly(m, s),
-		"iri+cc": BuildIRIAndCC(m, s),
+		"cc":             BuildCC(m, s),
+		"iri":            BuildIRIOnly(m, s),
+		"iri+cc":         BuildIRIAndCC(m, s),
+		"http-cc":        BuildHTTPCC(hm, hs),
+		"http-iri":       BuildHTTPIRIOnly(hm, hs),
+		"http-iri+cc":    BuildHTTPIRIAndCC(hm, hs),
+		"rtp-cc":         rtpCC(),
+		"http-exchange":  BuildHTTPExchange(hm, hs, DefaultHTTPExchange(hm)),
+		"http-reordered": BuildHTTPExchange(hm, hs, ReorderedHTTPExchange(hm)),
+		"voip-iri":       BuildSIPIRI(vm, vs),
+		"voip-iri+cc":    BuildVoIPIRIAndCC(vm, vs),
 	} {
 		nodes, err := ber.Parse(b)
 		if err != nil {

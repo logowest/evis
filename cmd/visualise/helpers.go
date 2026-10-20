@@ -15,7 +15,7 @@ type View struct {
 	Bytes        []byte
 	Nodes        []*ber.Node
 	Err          string
-	ActiveSample string // "cc", "iri", "both", or ""
+	ActiveSample string // e.g. "cc", "http-iri", "voip-both", or "" for an upload
 }
 
 // buildView parses+annotates bytes and derives a summary.
@@ -34,14 +34,19 @@ func buildView(source, active string, b []byte) View {
 // summarise scans the annotated tree for the payload kind and DNS question.
 func summarise(nodes []*ber.Node) string {
 	var kinds []string
+	seen := map[string]bool{}
 	var dns string
 	var walk func(n *ber.Node)
 	walk = func(n *ber.Node) {
-		switch n.Name {
-		case "iPPackets":
-			kinds = append(kinds, "CC · content of communication")
-		case "iPIRIOnly":
-			kinds = append(kinds, "IRI-only · packet headers")
+		kind := map[string]string{
+			"iPPackets": "CC · content of communication",
+			"iPIRIOnly": "IRI-only · packet headers",
+			"iPMMCC":    "CC · multimedia",
+			"iPMMIRI":   "IRI · multimedia signalling",
+		}[n.Name]
+		if kind != "" && !seen[kind] {
+			seen[kind] = true
+			kinds = append(kinds, kind)
 		}
 		if strings.HasPrefix(n.Name, "question") && dns == "" {
 			dns = n.Value
@@ -55,8 +60,9 @@ func summarise(nodes []*ber.Node) string {
 	}
 	kind := strings.Join(kinds, " + ")
 	if kind == "" {
-		kind = fmt.Sprintf("%d PDU(s)", len(nodes))
+		kind = "unrecognised payload"
 	}
+	kind = fmt.Sprintf("%d PS-PDU(s) · %s", len(nodes), kind)
 	if dns != "" {
 		return kind + " — DNS query " + dns
 	}

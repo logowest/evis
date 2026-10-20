@@ -165,8 +165,10 @@ func relOIDContent(arcs []uint64) []byte {
 	return out
 }
 
+// genTimeContent formats t as UTC GeneralizedTime, with fractional seconds
+// (millisecond resolution, no trailing zeros) only when t has them.
 func genTimeContent(t time.Time) []byte {
-	return []byte(t.UTC().Format("20060102150405Z"))
+	return []byte(t.UTC().Format("20060102150405.999Z"))
 }
 
 // ---------------------------------------------------------------------------
@@ -203,6 +205,15 @@ func COctet(num int, b []byte) []byte         { return CPrim(num, b) }
 func CPrintable(num int, s string) []byte     { return CPrim(num, []byte(s)) }
 func CUTF8(num int, s string) []byte          { return CPrim(num, []byte(s)) }
 func CGenTime(num int, t time.Time) []byte    { return CPrim(num, genTimeContent(t)) }
+
+// CBitString encodes the low nbits of v as an implicitly tagged BIT STRING:
+// an unused-bits octet, then the bits left-aligned (first bit = MSB of v's
+// nbits).
+func CBitString(num, nbits int, v uint64) []byte {
+	nbytes := (nbits + 7) / 8
+	unused := nbytes*8 - nbits
+	return CPrim(num, append([]byte{byte(unused)}, Fixed(nbytes, v<<unused)...))
+}
 
 // HexByte2 / HexByte4 helpers for building fixed-width OCTET STRING fields.
 func Fixed(n int, v uint64) []byte {
